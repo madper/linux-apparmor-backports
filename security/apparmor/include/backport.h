@@ -18,6 +18,8 @@
 #define __AA_BACKPORT_H
 
 #include <linux/fs.h>
+#include <linux/security.h>
+
 
 /* 4.8 backport
  * 078cd8279e659989b103359bb22373cc79445bde use current_time()
@@ -50,5 +52,23 @@ static inline void inode_lock_nested(struct inode *inode, unsigned subclass)
 {
 	mutex_lock_nested(&inode->i_mutex, subclass);
 }
+
+/* 4.1 backport for b1d9e6b0646d0e5ee5d9050bd236b6c65d66faef */
+
+#define LSM_HOOKS_NAME(X) LSM_HOOK_INIT(name, X),
+#define security_add_hooks(X, Y) /* nothing */
+
+#define security_module_enable(X)					\
+({									\
+	int ret = (security_module_enable)(&apparmor_ops);		\
+	if (ret) {							\
+		int error = register_security(&apparmor_ops);		\
+		if (error) {						\
+			AA_ERROR("Unable to register AppArmor\n");	\
+			ret = 0;					\
+		}							\
+	}								\
+	(ret);								\
+})
 
 #endif /* __AA_BACKPORT_H */
